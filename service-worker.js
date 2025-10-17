@@ -1,9 +1,3 @@
-const CACHE_NAME = 'deimon-cache-v1';
-const urlsToCache = [
-  '/',
-  'index.html'
-];
-
 // Install event: Cache the application shell
 self.addEventListener('install', event => {
   event.waitUntil(
