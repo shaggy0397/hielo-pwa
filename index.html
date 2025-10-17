@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- PWA Meta Tags -->
+    <title>SHAGGY digital mind</title>
+    <meta name="theme-color" content="#111827" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DEIMON">
+    <meta name="description" content="Tu asistente de memoria digital potenciado por IA.">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTML2Canvas CDN for PNG generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Focus styles for inputs/textarea */
+        #note-area:focus,
+        #chat-input:focus,
+        #api-key-input:focus,
+        #product-name-input:focus,
+        #product-price-input:focus,
+        #product-synonyms-input:focus {
+            box-shadow: 0 0 0 2px #4f46e5;
+            outline: none;
+        }
+
+        /* Recording animation for mic button */
+        .btn-mic-recording {
+            animation: pulse-rect 1.5s infinite;
+        }
+
+        @keyframes pulse-rect {
+            0% {
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 12px rgba(220, 38, 38, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+            }
+        }
+
+        /* Chat bubble styles */
+        .chat-bubble-container {
+            max-width: 80%;
+            cursor: pointer;
+        }
+
+        .chat-bubble-user {
+            background-color: #4f46e5;
+            color: white;
+            align-self: flex-end;
+            cursor: default;
+        }
+
+        .chat-bubble-ai {
+            background-color: #374151;
+            color: #d1d5db;
+            align-self: flex-start;
+        }
+
+        /* Gradient title animation: FIRE DIGITAL EFFECT */
+        .title-gradient {
+            background: linear-gradient(90deg, #f87171, #facc15, #fb923c, #f87171);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient-animation 6s ease infinite;
+        }
+
+        @keyframes gradient-animation {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* Modal transition */
+        #settings-modal,
+        #inventory-modal {
+            transition: opacity 0.3s ease;
+        }
+
+        /* Custom scrollbar for better look in dark mode */
+        #chat-window::-webkit-scrollbar,
+        #sales-log-table-container::-webkit-scrollbar,
+        #inventory-list::-webkit-scrollbar,
+        #real-time-preview::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #chat-window::-webkit-scrollbar-track,
+        #sales-log-table-container::-webkit-scrollbar-track,
+        #inventory-list::-webkit-scrollbar-track,
+        #real-time-preview::-webkit-scrollbar-track {
+            background: #1f2937;
+            border-radius: 10px;
+        }
+
+        #chat-window::-webkit-scrollbar-thumb,
+        #sales-log-table-container::-webkit-scrollbar-thumb,
+        #inventory-list::-webkit-scrollbar-thumb,
+        #real-time-preview::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 10px;
+        }
+
+        #chat-window::-webkit-scrollbar-thumb:hover,
+        #sales-log-table-container::-webkit-scrollbar-thumb:hover,
+        #inventory-list::-webkit-scrollbar-thumb:hover,
+        #real-time-preview::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+
+        /* Responsive split using grid for a clearer mobile-first flow */
+        .main-app-grid {
+            display: grid;
+            gap: 2rem;
+        }
+
+        /* Specific style for PNG generation (temporary white background) */
+        .png-target {
+            background-color: #fff;
+            color: #1f2937;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-gray-200">
+
+    <!-- Settings Modal -->
+    <div id="settings-modal"
+        class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden opacity-0">
+        <div class="bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold text-white mb-4">Configuración</h3>
+            <label for="api-key-input" class="block text-sm font-medium text-gray-300 mb-2">Clave de API de Google AI</label>
+            <input type="password" id="api-key-input" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="Pega tu clave aquí">
+            <p class="text-xs text-gray-400 mt-2">Tu clave se guarda de forma segura en tu navegador. Puedes obtener una
+                gratis en Google AI Studio.</p>
+            <div class="flex gap-4 mt-6">
+                <button id="save-api-key" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition hover:bg-indigo-700">Guardar</button>
+                <button id="close-modal" class="w-full bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-500 transition">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Modal -->
+    <div id="inventory-modal"
+        class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden opacity-0">
+        <div class="bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-2xl">
+            <h3 class="text-2xl font-bold text-white mb-4">Gestión de Inventario</h3>
+
+            <div class="bg-gray-700 p-4 rounded-xl mb-4">
+                <h4 class="text-lg font-semibold text-white mb-3">Añadir o Actualizar Producto</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <input type="text" id="product-name-input" class="p-2 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400" placeholder="Nombre del Producto (Ej: Caja de Coca-Cola)">
+                    <input type="number" id="product-price-input" class="p-2 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400" placeholder="Precio ($)" min="0" step="0.01">
+                </div>
+                <div class="mb-3">
+                    <input type="text" id="product-synonyms-input" class="w-full p-2 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400" placeholder="Sinónimos o alias, separados por coma (Ej: caja coca, coca caja)">
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button id="add-product-button" class="w-full sm:flex-1 bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-emerald-700 transition-all">Añadir/Actualizar</button>
+                    <div class="w-full sm:flex-1 flex gap-3">
+                        <button id="backup-inventory-button" class="w-full bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-all">Guardar Copia</button>
+                        <button id="restore-inventory-button" class="w-full bg-amber-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-700 transition-all">Cargar Copia</button>
+                    </div>
+                </div>
+                <input type="file" id="restore-file-input" class="hidden" accept="application/json">
+            </div>
+
+            <h4 class="text-lg font-semibold text-gray-300 mb-2">Lista de Productos
+                <span id="inventory-count" class="text-gray-500"></span></h4>
+            <div id="inventory-list"
+                class="max-h-64 overflow-y-auto space-y-2 p-3 bg-gray-700 rounded-lg border border-gray-600">
+                <div id="inventory-empty" class="text-center p-4 text-gray-500 italic">No hay productos en el
+                    inventario.</div>
+            </div>
+
+            <button id="close-inventory-modal" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition hover:bg-indigo-700 mt-6">Cerrar Inventario</button>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="max-w-3xl mx-auto p-4 sm:p-6 my-4 sm:my-8 mb-24 main-app-grid">
+        <header class="text-center mb-4">
+            <h1 class="text-4xl sm:text-5xl font-bold title-gradient">SHAGGY digital mind</h1>
+            <p class="text-lg text-gray-400 mt-2">Tu asistente de memoria digital</p>
+        </header>
+
+        <!-- === TOP PANEL: NOTE INPUT & REAL-TIME ANALYSIS === -->
+        <div id="top-panel" class="bg-gray-800 p-6 rounded-2xl shadow-2xl">
+            <label for="note-area" class="text-lg font-semibold mb-2 block text-gray-300">1. Escribe o dicta tu nota:</label>
+            <textarea id="note-area" rows="4" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-lg text-white placeholder-gray-400 transition" placeholder="Ej: Venta para Ana: una Lámpara por $200. Otra para Carlos: dos Sillas a $150 cada una..."></textarea>
+
+            <div class="flex flex-col sm:flex-row items-center mt-4 gap-4">
+                <button id="save-note-button" class="w-full sm:w-1/2 bg-indigo-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-indigo-700 transition-all shadow-md">Analizar y Guardar Ventas</button>
+                <button id="mic-button" class="w-full sm:w-1/2 flex items-center justify-center gap-3 bg-red-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-red-700 transition-all shadow-xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                    <span id="mic-text">Grabar Voz</span>
+                </button>
+            </div>
+
+            <div id="preview-loading-indicator" class="hidden text-center mt-4 text-indigo-400">
+                Analizando la nota con Gemini...
+            </div>
+            <div id="real-time-preview"
+                class="mt-6 p-4 bg-gray-700 rounded-lg border border-indigo-500/50 max-h-60 overflow-y-auto">
+                <h3 class="text-xl font-bold mb-3 text-indigo-400">🧾 Vista Previa de Ventas</h3>
+                <!-- Content will be dynamically generated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- === MIDDLE PANEL: SALES LOG / INVENTORY / CLEAR DATA === -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div id="middle-panel" class="bg-gray-800 p-6 rounded-2xl shadow-2xl">
+                <h2 class="text-2xl font-bold text-white mb-4">2. Registro de Ventas
+                    <span id="log-count" class="text-gray-400 text-lg"></span></h2>
+
+                <div id="sales-log-table-container" class="overflow-x-auto max-h-64 sm:max-h-96">
+                    <table id="sales-log-table" class="min-w-full divide-y divide-gray-700 rounded-xl">
+                        <thead class="bg-gray-700 sticky top-0">
+                            <tr>
+                                <th scope="col"
+                                    class="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    Cliente</th>
+                                <th scope="col"
+                                    class="px-3 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    Total ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sales-log-body" class="bg-gray-800 divide-y divide-gray-700"></tbody>
+                    </table>
+                </div>
+                <div id="sales-log-empty" class="text-center p-4 text-gray-500 italic">No hay ventas registradas aún.
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl flex flex-col justify-center items-center h-full">
+                    <h2 class="text-2xl font-bold text-white mb-4">3. Inventario</h2>
+                    <p class="text-center text-gray-400 mb-6">Gestiona tus productos y sus precios para un análisis de
+                        ventas más preciso.</p>
+                    <button id="open-inventory-button" class="w-full bg-purple-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-purple-700 transition-all shadow-md">
+                        Administrar Productos
+                    </button>
+                </div>
+
+                <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl flex flex-col justify-center items-center h-full">
+                    <h2 class="text-2xl font-bold text-white mb-4">4. Gestión de Datos</h2>
+                    <p class="text-center text-gray-400 mb-6">Archiva ventas antiguas o notas irrelevantes para mantener
+                        limpio tu registro.</p>
+                    <button id="clear-data-button" class="w-full bg-red-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-red-700 transition-all shadow-md">
+                        Borrar Datos Antiguos (Vía IA)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- === BOTTOM PANEL: CHAT WITH DEIMON === -->
+        <div id="bottom-panel" class="bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-2xl mt-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-white">5. Habla con DEIMON</h2>
+                <div class="flex items-center gap-2">
+                    <button id="settings-button" class="p-2 rounded-full hover:bg-gray-700 transition-colors" title="Configuración">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33-1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    </button>
+                    <button id="mute-button" class="p-2 rounded-full hover:bg-gray-700 transition-colors" title="Silenciar"></button>
+                </div>
+            </div>
+            <div id="chat-window"
+                class="h-64 border border-gray-700 rounded-lg p-4 overflow-y-auto flex flex-col gap-3 mb-4 bg-gray-900">
+            </div>
+            <div class="flex gap-2">
+                <input type="text" id="chat-input" class="flex-grow min-w-0 p-3 bg-gray-700 border border-gray-600 rounded-lg text-lg text-white placeholder-gray-400" placeholder="Ej: ¿Cuánto cuestan cinco lámparas?">
+                <button id="send-chat-button" class="flex-shrink-0 bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-700 transition-all shadow-md">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Element References ---
+            const noteArea = document.getElementById('note-area');
+            const micButton = document.getElementById('mic-button');
+            const micText = document.getElementById('mic-text');
+            const saveNoteButton = document.getElementById('save-note-button');
+            const muteButton = document.getElementById('mute-button');
+            const chatWindow = document.getElementById('chat-window');
+            const chatInput = document.getElementById('chat-input');
+            const sendChatButton = document.getElementById('send-chat-button');
+            const settingsModal = document.getElementById('settings-modal');
+            const settingsButton = document.getElementById('settings-button');
+            const closeModal = document.getElementById('close-modal');
+            const apiKeyInput = document.getElementById('api-key-input');
+            const saveApiKeyButton = document.getElementById('save-api-key');
+            const salesLogBody = document.getElementById('sales-log-body');
+            const salesLogEmpty = document.getElementById('sales-log-empty');
+            const logCount = document.getElementById('log-count');
+            const previewLoadingIndicator = document.getElementById('preview-loading-indicator');
+            const inventoryModal = document.getElementById('inventory-modal');
+            const openInventoryButton = document.getElementById('open-inventory-button');
+            const closeInventoryModal = document.getElementById('close-inventory-modal');
+            const productNameInput = document.getElementById('product-name-input');
+            const productPriceInput = document.getElementById('product-price-input');
+            const productSynonymsInput = document.getElementById('product-synonyms-input');
+            const addProductButton = document.getElementById('add-product-button');
+            const inventoryList = document.getElementById('inventory-list');
+            const inventoryEmpty = document.getElementById('inventory-empty');
+            const inventoryCount = document.getElementById('inventory-count');
+            const clearDataButton = document.getElementById('clear-data-button');
+            const backupInventoryButton = document.getElementById('backup-inventory-button');
+            const restoreInventoryButton = document.getElementById('restore-inventory-button');
+            const restoreFileInput = document.getElementById('restore-file-input');
+
+            // --- State Variables ---
+            let isRecording = false, recognition, allNotes = [], isMuted = false, audioContext, finalTranscript = '';
+            const messageAudios = new Map(); 
+            let realTimeSaleData = []; 
+            let inventory = []; 
+            let clearConfirmationActive = false;
+
+            // --- API Keys and URLs ---
+            const GEMINI_FLASH_MODEL = "gemini-2.5-flash-preview-05-20";
+            const GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts";
+            const apiKey = typeof __api_key !== 'undefined' ? __api_key : ''; 
+
+            // --- Icons ---
+            const iconSpeakerOn = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+            const iconSpeakerOff = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`;
+            const iconCopy = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+            const iconDownload = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
+
+            // --- JSON Schema for Structured Output ---
+            const salesSchema = {
+                type: "OBJECT",
+                properties: {
+                    sales: {
+                        type: "ARRAY",
+                        description: "An array of all individual sale transactions found in the note. Returns an empty array if no sales are found.",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                isSale: { type: "BOOLEAN", description: "Set to true if this part of the note clearly contains a sale, order, or transaction with prices." },
+                                clientName: { type: "STRING", description: "The name of the customer for this specific transaction, or 'Desconocido' if none is clear." },
+                                productsSold: {
+                                    type: "ARRAY",
+                                    description: "List of products/services sold in this transaction.",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            name: { type: "STRING", description: "Name of the product/service." },
+                                            quantity: { type: "NUMBER", description: "Quantity sold, default to 1 if not specified." }
+                                        },
+                                        required: ["name", "quantity"]
+                                    }
+                                },
+                                totalValue: { type: "NUMBER", description: "The calculated sum for this specific transaction. Use prices from inventory if possible." },
+                            },
+                            required: ["isSale", "clientName", "productsSold", "totalValue"]
+                        }
+                    }
+                },
+                required: ["sales"]
+            };
+
+            // --- Utility Functions ---
+
+            function getApiKey() {
+                return localStorage.getItem('geminiApiKey') || apiKey;
+            }
+
+            function initialize() {
+                allNotes = JSON.parse(localStorage.getItem('deimonNotes') || '[]');
+                inventory = JSON.parse(localStorage.getItem('deimonInventory') || '[]');
+                updateMuteButtonIcon();
+                renderSalesLog();
+                renderInventoryList();
+                resetPreview();
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) { 
+                    console.error("Web Audio API not supported.", e); 
+                    if (!audioContext) {
+                         addMessageToChat("Advertencia: El audio (TTS) no es compatible con tu navegador.", 'ai');
+                    }
+                }
+                if (!getApiKey()) {
+                    addMessageToChat("¡Bienvenido! Agrega tu clave de API en Configuración para activar las funciones de chat y análisis.", 'ai');
+                } else {
+                    addMessageToChat("¡Hola! Soy DEIMON. Estoy listo para registrar y analizar tus ventas en tiempo real.", 'ai');
+                }
+            }
+            
+            function resetPreview() {
+                updatePreview([]); 
+            }
+
+            function updatePreview(salesArray) {
+                const previewContainer = document.getElementById('real-time-preview');
+                const title = previewContainer.querySelector('h3');
+                
+                previewContainer.innerHTML = '';
+                previewContainer.appendChild(title);
+                
+                realTimeSaleData = salesArray || [];
+
+                if (!salesArray || salesArray.length === 0) {
+                    const noSalesMessage = document.createElement('p');
+                    noSalesMessage.className = 'text-center p-4 text-gray-500 italic';
+                    noSalesMessage.textContent = 'No se han detectado ventas en la nota actual.';
+                    previewContainer.appendChild(noSalesMessage);
+                    return;
+                }
+                
+                salesArray.forEach((sale) => {
+                    if (!sale.isSale) return;
+
+                    const card = document.createElement('div');
+                    card.className = 'p-3 mb-3 bg-gray-600 rounded-lg border border-gray-500';
+                    
+                    const client = sale.clientName || 'Desconocido';
+                    const total = `$${(sale.totalValue || 0).toFixed(2)}`;
+
+                    let productsHtml = '<li class="italic text-gray-400">No hay productos detallados.</li>';
+                    if (sale.productsSold && sale.productsSold.length > 0) {
+                        productsHtml = sale.productsSold.map(item => `<li>${item.quantity} x ${item.name}</li>`).join('');
+                    }
+
+                    card.innerHTML = `
+                        <p class="font-bold text-white">Cliente: <span class="font-normal">${client}</span></p>
+                        <h4 class="font-semibold text-gray-300 mt-2 mb-1 text-sm">Productos:</h4>
+                        <ul class="list-disc pl-5 text-white text-sm space-y-0.5">${productsHtml}</ul>
+                        <p class="text-lg font-bold pt-2 border-t border-gray-700 mt-2">
+                           <span class="font-semibold text-gray-300">Total:</span> <span class="text-emerald-400">${total}</span>
+                        </p>
+                    `;
+                    previewContainer.appendChild(card);
+                });
+
+                if (previewContainer.childElementCount <= 1) { // Only the title is present
+                    const noSalesMessage = document.createElement('p');
+                    noSalesMessage.className = 'text-center p-4 text-gray-500 italic';
+                    noSalesMessage.textContent = 'No se han detectado ventas en la nota actual.';
+                    previewContainer.appendChild(noSalesMessage);
+                }
+            }
+            
+            function renderSalesLog() {
+                salesLogBody.innerHTML = '';
+                const sales = allNotes.filter(note => note.saleData && note.saleData.isSale);
+                if (sales.length === 0) {
+                    salesLogEmpty.classList.remove('hidden');
+                } else {
+                    salesLogEmpty.classList.add('hidden');
+                    sales.sort((a, b) => b.timestamp - a.timestamp); 
+                    sales.forEach(note => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-gray-700 transition-colors';
+                        const clientName = note.saleData.clientName;
+                        const totalValue = `$${(note.saleData.totalValue || 0).toFixed(2)}`;
+                        tr.innerHTML = `
+                            <td class="px-3 py-3 whitespace-nowrap text-sm font-medium text-white">${clientName}</td>
+                            <td class="px-3 py-3 whitespace-nowrap text-sm font-bold text-right text-emerald-400">${totalValue}</td>`;
+                        salesLogBody.appendChild(tr);
+                    });
+                }
+                logCount.textContent = `(${sales.length})`;
+            }
+
+            // --- Inventory Management Functions ---
+            function saveInventory() {
+                localStorage.setItem('deimonInventory', JSON.stringify(inventory));
+            }
+
+            function renderInventoryList() {
+                inventoryList.innerHTML = '';
+                if (inventory.length === 0) {
+                    inventoryEmpty.classList.remove('hidden');
+                    inventoryList.appendChild(inventoryEmpty);
+                } else {
+                    inventoryEmpty.classList.add('hidden');
+                    inventory.forEach((product, index) => {
+                        const item = document.createElement('div');
+                        item.className = 'flex justify-between items-start p-3 bg-gray-800 rounded-lg border border-gray-700';
+                        
+                        let synonymsHTML = '';
+                        if (product.synonyms && product.synonyms.length > 0) {
+                            synonymsHTML = `<p class="text-xs text-gray-400 mt-1">Alias: ${product.synonyms.join(', ')}</p>`;
+                        }
+
+                        item.innerHTML = `
+                            <div class="flex-grow">
+                                <p class="text-white font-semibold">${product.name}</p>
+                                <p class="text-emerald-400 text-sm">$${product.price.toFixed(2)}</p>
+                                ${synonymsHTML}
+                            </div>
+                            <button data-index="${index}" class="remove-product-btn flex-shrink-0 ml-2 p-2 text-red-400 hover:text-red-300 transition" title="Eliminar Producto">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>`;
+                        item.querySelector('.remove-product-btn').addEventListener('click', (e) => {
+                            if (e.currentTarget.dataset.index !== undefined) {
+                                const index = parseInt(e.currentTarget.dataset.index, 10);
+                                inventory.splice(index, 1);
+                                saveInventory();
+                                renderInventoryList();
+                            }
+                        });
+                        inventoryList.appendChild(item);
+                    });
+                }
+                inventoryCount.textContent = `(${inventory.length})`;
+            }
+            
+            addProductButton.addEventListener('click', () => {
+                const name = productNameInput.value.trim();
+                const price = parseFloat(productPriceInput.value);
+                const synonyms = productSynonymsInput.value.split(',')
+                    .map(s => s.trim())
+                    .filter(s => s.length > 0);
+
+                if (name && !isNaN(price) && price >= 0) {
+                    const existingProductIndex = inventory.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+                    if (existingProductIndex > -1) {
+                        inventory[existingProductIndex].price = price;
+                        inventory[existingProductIndex].synonyms = synonyms;
+                    } else {
+                        inventory.push({ name, price, synonyms });
+                    }
+                    saveInventory();
+                    renderInventoryList();
+                    productNameInput.value = '';
+                    productPriceInput.value = '';
+                    productSynonymsInput.value = '';
+                } else {
+                    addMessageToChat('Por favor, ingresa un nombre de producto válido y un precio no negativo en el inventario.', 'ai');
+                }
+            });
+
+            // --- API Calls (UPDATED PROMPT) ---
+            async function parseNoteForSale(noteText, currentApiKey, maxRetries = 3) {
+                if (!noteText.trim()) return resetPreview();
+                if (!currentApiKey) return resetPreview();
+
+                previewLoadingIndicator.classList.remove('hidden');
+                updatePreview([]);
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_FLASH_MODEL}:generateContent?key=${currentApiKey}`;
+                const inventoryContext = inventory.map(p => 
+                    `Product: "${p.name}" (Price: $${p.price.toFixed(2)})${p.synonyms && p.synonyms.length > 0 ? `, Synonyms: [${p.synonyms.join(', ')}]` : ''}`
+                ).join('; ') || 'No products in inventory.';
+
+                const systemPrompt = `You are a highly efficient sales data extractor. Analyze the user's note to extract all individual sales transactions.
+                CRITICAL RULE: You must recognize numbers written as words (e.g., 'uno', 'dos', 'cinco', 'diez') and convert them to digits (1, 2, 5, 10) when identifying quantities.
+                INVENTORY CONTEXT: ${inventoryContext}
+                For each sale, extract the client, products, and total. You MUST use the inventory context, including product synonyms, to correctly identify products. For example, if the note says "dos cajas coca" and a synonym is "caja coca", match it to the main product name with a quantity of 2.
+                Return a JSON object with a 'sales' array. If a part of the text is not a sale, do not include it. If no sales are found, return an empty 'sales' array.`;
+                
+                const payload = {
+                    contents: [{ parts: [{ text: `Note to analyze: "${noteText}"` }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: { responseMimeType: "application/json", responseSchema: salesSchema }
+                };
+                
+                for (let attempt = 0; attempt < maxRetries; attempt++) {
+                    try {
+                        const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        if (!response.ok) {
+                            if (response.status === 429 && attempt < maxRetries - 1) {
+                                await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000)); continue;
+                            }
+                            throw new Error(`HTTP Error: ${response.status}`);
+                        }
+                        const result = await response.json();
+                        const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (jsonText) {
+                            const data = JSON.parse(jsonText);
+                            updatePreview(data.sales); 
+                        } else { throw new Error("Empty AI response."); }
+                        previewLoadingIndicator.classList.add('hidden');
+                        return;
+                    } catch (error) {
+                        console.error(`JSON parsing error (Attempt ${attempt + 1}):`, error);
+                        if (attempt === maxRetries - 1) { previewLoadingIndicator.classList.add('hidden'); updatePreview([]); }
+                    }
+                }
+            }
+
+            // --- Event Handlers ---
+            settingsButton.addEventListener('click', () => {
+                apiKeyInput.value = localStorage.getItem('geminiApiKey') || apiKey;
+                settingsModal.classList.remove('hidden');
+                setTimeout(() => settingsModal.classList.remove('opacity-0'), 10);
+            });
+            closeModal.addEventListener('click', () => {
+                settingsModal.classList.add('opacity-0');
+                setTimeout(() => settingsModal.classList.add('hidden'), 300);
+            });
+            openInventoryButton.addEventListener('click', () => {
+                renderInventoryList();
+                inventoryModal.classList.remove('hidden');
+                setTimeout(() => inventoryModal.classList.remove('opacity-0'), 10);
+            });
+            closeInventoryModal.addEventListener('click', () => {
+                inventoryModal.classList.add('opacity-0');
+                setTimeout(() => inventoryModal.classList.add('hidden'), 300);
+            });
+            saveApiKeyButton.addEventListener('click', () => {
+                localStorage.setItem('geminiApiKey', apiKeyInput.value.trim());
+                addMessageToChat("Clave de API guardada.", 'ai');
+                closeModal.click();
+            });
+
+            let typingTimer;
+            noteArea.addEventListener('input', () => {
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(() => parseNoteForSale(noteArea.value.trim(), getApiKey()), 750);
+            });
+            noteArea.addEventListener('blur', () => {
+                clearTimeout(typingTimer);
+                parseNoteForSale(noteArea.value.trim(), getApiKey());
+            });
+
+            saveNoteButton.addEventListener('click', async () => {
+                const noteText = noteArea.value.trim();
+                if (!noteText) return;
+                
+                if (noteArea.value.trim() !== finalTranscript.trim()) {
+                    await parseNoteForSale(noteText, getApiKey());
+                }
+
+                if (!realTimeSaleData || realTimeSaleData.length === 0) {
+                    addMessageToChat(`No se detectaron ventas para guardar.`, 'ai');
+                    return;
+                }
+
+                let salesSavedCount = 0;
+                realTimeSaleData.forEach(sale => {
+                    if (sale.isSale) {
+                        allNotes.push({ text: noteText, timestamp: Date.now(), saleData: sale });
+                        salesSavedCount++;
+                    }
+                });
+
+                if (salesSavedCount > 0) {
+                    localStorage.setItem('deimonNotes', JSON.stringify(allNotes));
+                    saveNoteButton.textContent = salesSavedCount > 1 ? '¡Ventas Guardadas!' : '¡Venta Guardada!';
+                    setTimeout(() => { saveNoteButton.textContent = 'Analizar y Guardar Ventas'; }, 1500);
+                    addMessageToChat(`${salesSavedCount} nueva(s) venta(s) guardada(s).`, 'ai');
+                } else {
+                    addMessageToChat('No se encontraron ventas válidas para guardar.', 'ai');
+                }
+                
+                noteArea.value = '';
+                finalTranscript = ''; 
+                resetPreview();
+                renderSalesLog();
+            });
+            
+            clearDataButton.addEventListener('click', () => {
+                if (!clearConfirmationActive) {
+                    addMessageToChat("Advertencia: Haz clic de nuevo en 'CONFIRMAR BORRADO' en 5 segundos para eliminar notas de más de 90 días.", 'ai');
+                    clearConfirmationActive = true;
+                    clearDataButton.textContent = 'CONFIRMAR BORRADO (5s)';
+                    clearDataButton.classList.replace('bg-red-600', 'bg-orange-500');
+                    setTimeout(() => {
+                        if (clearConfirmationActive) {
+                            clearConfirmationActive = false;
+                            clearDataButton.textContent = 'Borrar Datos Antiguos (Vía IA)';
+                            clearDataButton.classList.replace('bg-orange-500', 'bg-red-600');
+                        }
+                    }, 5000);
+                } else {
+                    const threshold = Date.now() - (90 * 24 * 60 * 60 * 1000);
+                    const oldNotesCount = allNotes.length;
+                    allNotes = allNotes.filter(note => note.timestamp >= threshold);
+                    const clearedCount = oldNotesCount - allNotes.length;
+                    localStorage.setItem('deimonNotes', JSON.stringify(allNotes));
+                    renderSalesLog();
+                    addMessageToChat(clearedCount > 0 ? `Se eliminaron ${clearedCount} notas antiguas.` : `No se encontraron notas antiguas para borrar.`, 'ai');
+                    clearConfirmationActive = false;
+                    clearDataButton.textContent = '¡Datos Limpios!';
+                    clearDataButton.classList.replace('bg-orange-500', 'bg-green-600');
+                    setTimeout(() => { 
+                        clearDataButton.textContent = 'Borrar Datos Antiguos (Vía IA)';
+                        clearDataButton.classList.replace('bg-green-600', 'bg-red-600');
+                    }, 2000);
+                }
+            });
+
+            // Inventory Backup/Restore Logic
+            backupInventoryButton.addEventListener('click', () => {
+                if (inventory.length === 0) {
+                    addMessageToChat("El inventario está vacío. No hay nada que guardar.", 'ai');
+                    return;
+                }
+                const jsonData = JSON.stringify(inventory, null, 2);
+                const blob = new Blob([jsonData], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const date = new Date().toISOString().slice(0, 10);
+                a.href = url;
+                a.download = `deimon_inventory_backup_${date}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                addMessageToChat("Copia de seguridad del inventario descargada.", 'ai');
+            });
+
+            restoreInventoryButton.addEventListener('click', () => {
+                restoreFileInput.click();
+            });
+
+            restoreFileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (!Array.isArray(data) || (data.length > 0 && (typeof data[0].name === 'undefined' || typeof data[0].price === 'undefined'))) {
+                            throw new Error('Formato de archivo inválido.');
+                        }
+                        inventory = data;
+                        saveInventory();
+                        renderInventoryList();
+                        addMessageToChat(`Inventario restaurado con éxito. Se cargaron ${inventory.length} productos.`, 'ai');
+                    } catch (error) {
+                        console.error("Error al cargar la copia de seguridad:", error);
+                        addMessageToChat(`Error: El archivo de la copia de seguridad es inválido o está corrupto.`, 'ai');
+                    } finally {
+                        event.target.value = null; // Reset file input
+                    }
+                };
+                reader.readAsText(file);
+            });
+            
+            sendChatButton.addEventListener('click', handleChat);
+            chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleChat(); });
+            muteButton.addEventListener('click', () => { 
+                isMuted = !isMuted; 
+                localStorage.setItem('isMuted', isMuted);
+                updateMuteButtonIcon(); 
+                const audio = document.querySelector('audio');
+                if (audio) audio.pause();
+            });
+
+            // --- Main Chat Functions (UPDATED PROMPT) ---
+            async function handleChat() {
+                const userQuery = chatInput.value.trim();
+                if (!userQuery) return;
+
+                const currentApiKey = getApiKey();
+                if (!currentApiKey) {
+                    addMessageToChat("Por favor, configura tu clave de API para usar el chat.", 'ai');
+                    return;
+                }
+
+                addMessageToChat(userQuery, 'user');
+                chatInput.value = '';
+                addTypingIndicator();
+
+                const notesContext = allNotes.map((note) => {
+                    const date = new Date(note.timestamp).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+                    if (note.saleData && note.saleData.isSale) {
+                        const productsList = (note.saleData.productsSold || []).map(p => `${p.quantity}x ${p.name}`).join(', ');
+                        return `[VENTA] Cliente: ${note.saleData.clientName}, Productos: ${productsList}, Total: $${note.saleData.totalValue.toFixed(2)}, Nota: "${note.text}" (Fecha: ${date})`;
+                    }
+                    return `[NOTA] "${note.text}" (Fecha: ${date})`;
+                }).join('\n');
+                
+                const inventoryContext = inventory.map(p => 
+                    `Product: "${p.name}" (Price: $${p.price.toFixed(2)})${p.synonyms && p.synonyms.length > 0 ? `, Synonyms: [${p.synonyms.join(', ')}]` : ''}`
+                ).join('; ') || 'No products in inventory.';
+                
+                const systemPrompt = `You are "DEIMON", a business analysis expert. Use the provided NOTES CONTEXT and INVENTORY CONTEXT to answer.
+                CRITICAL RULE: You must understand numbers written as words (e.g., 'tres', 'ocho') and use their digit equivalents (3, 8) in your analysis and calculations.
+                CRITICAL INSTRUCTION: If a user asks about a product that is not an exact match in the inventory, find the closest possible match using its name or synonyms. If you find a likely match, phrase your answer as a suggestion. For example: "No encontré 'coca caja', pero quizás te referías a 'Caja de Coca-Cola', que cuesta $X.XX". Be helpful and proactive.`;
+                const fullPrompt = `INVENTORY CONTEXT: ${inventoryContext}\n\nNOTES CONTEXT:\n${notesContext}\n\nUSER QUESTION: "${userQuery}"`;
+                
+                await callGeminiAPI(fullPrompt, systemPrompt, currentApiKey);
+            }
+            
+            async function callGeminiAPI(prompt, systemPrompt, currentApiKey, maxRetries = 3) {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_FLASH_MODEL}:generateContent?key=${currentApiKey}`;
+                const payload = { contents: [{ parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] } };
+
+                for (let attempt = 0; attempt < maxRetries; attempt++) {
+                    try {
+                        const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        if (response.status === 429 && attempt < maxRetries - 1) {
+                            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000)); continue;
+                        }
+                        if (!response.ok) {
+                            throw new Error(`Error HTTP: ${response.status}`);
+                        }
+                        const result = await response.json();
+                        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                        removeTypingIndicator();
+                        await speakAndShowMessage(text || 'Lo siento, no pude procesar tu solicitud.', currentApiKey);
+                        return;
+                    } catch (error) {
+                        console.error(`Chatbot error (Attempt ${attempt + 1}):`, error);
+                        if (attempt === maxRetries - 1) {
+                            removeTypingIndicator();
+                            addMessageToChat('Hubo un problema de conexión. Inténtalo de nuevo.', 'ai');
+                        }
+                    }
+                }
+            }
+            
+            async function speakAndShowMessage(text, currentApiKey) {
+                const messageId = `msg-${Date.now()}`;
+                addMessageToChat(text, 'ai', messageId);
+                if (isMuted || !text.trim() || !audioContext) return;
+
+                const ttsApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TTS_MODEL}:generateContent?key=${currentApiKey}`;
+                const payload = {
+                    contents: [{ parts: [{ text: `With a friendly, firm, and efficient tone, say: ${text}` }] }],
+                    generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Charon" } } } }, 
+                    model: GEMINI_TTS_MODEL
+                };
+
+                try {
+                    const response = await fetch(ttsApiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (!response.ok) return;
+                    const result = await response.json();
+                    const audioPart = result.candidates?.[0]?.content?.parts?.[0];
+                    if (audioPart && audioPart.inlineData?.data) {
+                        const pcmData = base64ToArrayBuffer(audioPart.inlineData.data);
+                        const wavBlob = pcmToWav(new Int16Array(pcmData), 24000);
+                        const audioUrl = URL.createObjectURL(wavBlob);
+                        messageAudios.set(messageId, audioUrl);
+                        new Audio(audioUrl).play();
+                    }
+                } catch (error) { console.error('Error generating voice:', error); }
+            }
+
+            // --- UI Functions ---
+            function addMessageToChat(message, sender, messageId = null) {
+                const bubbleContainer = document.createElement('div');
+                bubbleContainer.className = `chat-bubble-container w-full flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+                const messageContent = document.createElement('div');
+                messageContent.id = messageId || '';
+                messageContent.className = `chat-bubble p-3 rounded-lg w-fit text-base break-words ${sender === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}`;
+                messageContent.textContent = message;
+
+                if (sender === 'ai' && messageId) {
+                    messageContent.title = "Haz clic para reproducir audio";
+                    messageContent.addEventListener('click', () => {
+                        const audioUrl = messageAudios.get(messageId);
+                        if (audioUrl) new Audio(audioUrl).play();
+                    });
+                    const actionsContainer = document.createElement('div');
+                    actionsContainer.className = 'flex gap-2 mt-2';
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'flex items-center gap-1 text-xs text-gray-400 hover:text-white transition p-1 rounded-full';
+                    copyBtn.innerHTML = iconCopy;
+                    copyBtn.title = 'Copiar texto';
+                    copyBtn.onclick = () => copyText(messageContent.textContent, copyBtn);
+                    const downloadBtn = document.createElement('button');
+                    downloadBtn.className = 'flex items-center gap-1 text-xs text-gray-400 hover:text-white transition p-1 rounded-full';
+                    downloadBtn.innerHTML = iconDownload;
+                    downloadBtn.title = 'Descargar como imagen PNG';
+                    downloadBtn.onclick = () => downloadAsPng(messageContent);
+                    const aiWrapper = document.createElement('div');
+                    aiWrapper.className = 'flex flex-col items-start';
+                    aiWrapper.appendChild(messageContent);
+                    actionsContainer.appendChild(copyBtn);
+                    actionsContainer.appendChild(downloadBtn);
+                    aiWrapper.appendChild(actionsContainer);
+                    bubbleContainer.appendChild(aiWrapper);
+                } else {
+                    bubbleContainer.appendChild(messageContent);
+                }
+                chatWindow.appendChild(bubbleContainer);
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            }
+
+            function copyText(text, buttonElement) {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    const originalHTML = buttonElement.innerHTML;
+                    buttonElement.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+                    setTimeout(() => { buttonElement.innerHTML = originalHTML; }, 1500);
+                } catch (err) { console.error('Failed to copy text', err); }
+                document.body.removeChild(textarea);
+            }
+
+            function downloadAsPng(element) {
+                const tempDiv = document.createElement('div');
+                tempDiv.className = 'png-target';
+                tempDiv.textContent = element.textContent;
+                document.body.appendChild(tempDiv);
+                html2canvas(tempDiv, { scale: 3, backgroundColor: null }).then(canvas => {
+                    const image = canvas.toDataURL('image/png');
+                    const link = document.createElement('a');
+                    link.download = 'deimon-response.png';
+                    link.href = image;
+                    link.click();
+                    document.body.removeChild(tempDiv);
+                }).catch(error => { console.error('Error generating PNG:', error); document.body.removeChild(tempDiv); });
+            }
+
+            function updateMuteButtonIcon() { 
+                isMuted = localStorage.getItem('isMuted') === 'true';
+                muteButton.innerHTML = isMuted ? iconSpeakerOff : iconSpeakerOn; 
+                muteButton.title = isMuted ? "Activar Voz" : "Silenciar Voz";
+            }
+            
+            function addTypingIndicator() {
+                removeTypingIndicator(); 
+                const indicator = document.createElement('div');
+                indicator.id = 'typing-indicator';
+                indicator.className = 'chat-bubble-container w-full flex justify-start'; 
+                indicator.innerHTML = `<div class="chat-bubble chat-bubble-ai p-3 rounded-lg w-fit"><div class="flex items-center gap-1"><span class="h-2 w-2 bg-gray-500 rounded-full animate-bounce"></span><span class="h-2 w-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-.15s]"></span><span class="h-2 w-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-.3s]"></span></div></div>`;
+                chatWindow.appendChild(indicator);
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            }
+            function removeTypingIndicator() { document.getElementById('typing-indicator')?.remove(); }
+            
+            // --- Speech Recognition Setup ---
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'es-MX';
+                
+                recognition.onstart = () => { isRecording = true; micText.textContent = 'Escuchando...'; micButton.classList.add('btn-mic-recording', 'bg-red-800'); finalTranscript = noteArea.value; };
+                recognition.onend = () => { isRecording = false; micText.textContent = 'Grabar Voz'; micButton.classList.remove('btn-mic-recording', 'bg-red-800'); if (noteArea.value.trim().length > 0) parseNoteForSale(noteArea.value.trim(), getApiKey()); };
+                recognition.onerror = (e) => { 
+                    console.error("Speech recognition error:", e.error); recognition.onend(); 
+                    addMessageToChat(e.error === 'not-allowed' ? "Error: Se necesita permiso para el micrófono." : "Error de reconocimiento.", 'ai');
+                };
+                recognition.onresult = (event) => {
+                    let interimTranscript = '', tempFinalTranscript = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) tempFinalTranscript += event.results[i][0].transcript + ' '; 
+                        else interimTranscript += event.results[i][0].transcript; 
+                    }
+                    finalTranscript += tempFinalTranscript; 
+                    noteArea.value = finalTranscript.trim() + ' ' + interimTranscript;
+                };
+                micButton.addEventListener('click', () => isRecording ? recognition.stop() : recognition.start());
+            } else { 
+                micButton.disabled = true; micButton.classList.replace('bg-red-600', 'bg-gray-500'); micText.textContent = 'Dictado no compatible'; 
+            }
+
+            // --- TTS Utilities ---
+            function base64ToArrayBuffer(b64) {
+                const bin = atob(b64);
+                const bytes = new Uint8Array(bin.length);
+                for (let i = 0; i < bin.length; i++) { bytes[i] = bin.charCodeAt(i); }
+                return bytes.buffer;
+            }
+            function pcmToWav(pcm, sampleRate) {
+                const dataSize = pcm.length * pcm.BYTES_PER_ELEMENT;
+                const view = new DataView(new ArrayBuffer(44));
+                view.setUint32(0, 0x52494646, false); 
+                view.setUint32(4, 36 + dataSize, true); 
+                view.setUint32(8, 0x57415645, false); 
+                view.setUint32(12, 0x666d7420, false); 
+                view.setUint32(16, 16, true); 
+                view.setUint16(20, 1, true); 
+                view.setUint16(22, 1, true); 
+                view.setUint32(24, sampleRate, true); 
+                view.setUint32(28, sampleRate * 2, true); 
+                view.setUint16(32, 2, true); 
+                view.setUint16(34, 16, true); 
+                view.setUint32(36, 0x64617461, false); 
+                view.setUint32(40, dataSize, true); 
+                const wavBytes = new Uint8Array(44 + dataSize);
+                wavBytes.set(new Uint8Array(view.buffer), 0);
+                wavBytes.set(new Uint8Array(pcm.buffer), 44);
+                return new Blob([wavBytes], { type: 'audio/wav' });
+            }
+
+            initialize();
+        });
+    </script>
+</body>
+
+</html>
